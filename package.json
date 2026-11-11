@@ -26,12 +26,12 @@
   "author": "FillDDak (https://github.com/FillDDak)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FillDDak/module2.git"
+    "url": "git+https://github.com/FillDDak/gridclip.git"
   },
   "bugs": {
-    "url": "https://github.com/FillDDak/module2/issues"
+    "url": "https://github.com/FillDDak/gridclip/issues"
   },
-  "homepage": "https://github.com/FillDDak/module2#readme",
+  "homepage": "https://github.com/FillDDak/gridclip#readme",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
