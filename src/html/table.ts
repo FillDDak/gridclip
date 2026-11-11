@@ -303,7 +303,7 @@ class TableBuilder {
       }
       // Excel writes the spaces of an mso-spacerun as `&nbsp;` and turns them
       // back into plain spaces on paste (verified with Excel for Windows).
-      if (this.stack[this.stack.length - 1]?.spacerun) text = text.replace(/ /g, ' ');
+      if (this.stack[this.stack.length - 1]?.spacerun) text = text.replace(/\u00a0/g, ' ');
       if (text) this.text!.text(text, this.whiteSpace());
     } else if (!this.inCaption && this.strayInvisible.length === 0 && /[^\t\n\f\r \u00a0]/.test(value)) {
       this.strayText = true;
@@ -611,6 +611,8 @@ function assemble(b: TableBuilder, mergedCells: 'empty' | 'repeat', options: Par
   const rows: Grid = [];
   for (let r = 0; r < b.rowCount; r++) rows.push(new Array<string>(b.width).fill(''));
   const merges: MergeRange[] = [];
+  /** Slots covered by the merges reported so far, by row. */
+  const covered = new Map<number, Uint8Array>();
   const preserveNbsp = options.preserveNbsp === true;
 
   for (const cell of b.cells) {
@@ -630,9 +632,30 @@ function assemble(b: TableBuilder, mergedCells: 'empty' | 'repeat', options: Par
     }
     rows[cell.row]![cell.col] = value;
 
-    const rowSpan = cell.ignoreRowspan ? 1 : cell.rowSpan;
-    const colSpan = cell.ignoreColspan ? 1 : cell.colSpan;
+    let rowSpan = cell.ignoreRowspan ? 1 : cell.rowSpan;
+    let colSpan = cell.ignoreColspan ? 1 : cell.colSpan;
     if (rowSpan > 1 || colSpan > 1) {
+      // Malformed tables can make a cell's span cover slots that an earlier
+      // cell already spans into (a "table model error" that browsers render
+      // as overlapping cells). Merges must not overlap, so keep the free
+      // rectangle starting at the cell; its position is unaffected.
+      const free = (r: number, c: number) => covered.get(r)?.[c] !== 1;
+      let cols = 1;
+      while (cols < colSpan && free(cell.row, cell.col + cols)) cols++;
+      let height = 1;
+      grow: while (height < rowSpan) {
+        for (let c = cell.col; c < cell.col + cols; c++) if (!free(cell.row + height, c)) break grow;
+        height++;
+      }
+      rowSpan = height;
+      colSpan = cols;
+    }
+    if (rowSpan > 1 || colSpan > 1) {
+      for (let r = cell.row; r < cell.row + rowSpan; r++) {
+        let line = covered.get(r);
+        if (!line) covered.set(r, (line = new Uint8Array(b.width)));
+        for (let c = cell.col; c < cell.col + colSpan; c++) line[c] = 1;
+      }
       merges.push({ row: cell.row, col: cell.col, rowSpan, colSpan });
       if (mergedCells === 'repeat') {
         for (let r = cell.row; r < cell.row + rowSpan; r++) {

@@ -144,6 +144,35 @@ describe('parseHTMLTable: structure', () => {
     expect(table.merges).toEqual(expected > 1 ? [{ row: 0, col: 0, rowSpan: expected, colSpan: 1 }] : []);
   });
 
+  it('never reports overlapping merges, even for overlapping cells', () => {
+    // The colspan=2 cell starts in a free slot but its span runs into the slot
+    // the rowspan cell above covers. Browsers draw the cells overlapping; the
+    // positions match theirs, and the second merge keeps the free part only.
+    expect(parseHTMLTable('<table><tr><td>a</td><td rowspan=2>b</td></tr><tr><td colspan=2>c</td></tr></table>')).toEqual({
+      rows: [
+        ['a', 'b'],
+        ['c', ''],
+      ],
+      merges: [{ row: 0, col: 1, rowSpan: 2, colSpan: 1 }],
+    });
+    expect(parseHTMLTable('<table><td><td rowspan=0><tr><td colspan=2>')!.merges).toEqual([{ row: 0, col: 1, rowSpan: 2, colSpan: 1 }]);
+    expect(
+      parseHTMLTable('<table><tr><td>a</td><td>b</td><td rowspan=3>c</td></tr><tr><td colspan=3 rowspan=2>d</td></tr><tr></tr></table>', {
+        mergedCells: 'repeat',
+      }),
+    ).toEqual({
+      rows: [
+        ['a', 'b', 'c'],
+        ['d', 'd', 'c'],
+        ['d', 'd', 'c'],
+      ],
+      merges: [
+        { row: 0, col: 2, rowSpan: 3, colSpan: 1 },
+        { row: 1, col: 0, rowSpan: 2, colSpan: 2 },
+      ],
+    });
+  });
+
   it('can repeat merged values', () => {
     expect(rows('<table><tr><td colspan=2 rowspan=2>m</td><td>a</td></tr><tr><td>b</td></tr></table>', { mergedCells: 'repeat' })).toEqual([
       ['m', 'm', 'a'],
@@ -562,7 +591,7 @@ describe('stringifyHTMLTable', () => {
         `<td style="white-space:pre-wrap">${run(1)}x<br style="mso-data-placement:same-cell">${run(2)}y${run(1)}</td>`,
     );
     // A real no-break space stays one.
-    expect(stringifyHTMLTable([['a b']])).toContain('<td>a b</td>');
+    expect(stringifyHTMLTable([['a\u00a0b']])).toContain('<td>a\u00a0b</td>');
   });
 
   it('pads ragged rows and converts values', () => {

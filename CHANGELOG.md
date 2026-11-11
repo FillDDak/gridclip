@@ -9,6 +9,7 @@ All notable changes to this project are documented here. The format follows
 ### Fixed
 
 - `stringifyHTMLTable` (and so `setClipboardData`/`copyToClipboard`): leading, trailing and repeated spaces survive pasting into Excel. Excel ignores CSS `white-space` on paste, so these spaces are now also written as Excel's own `<span style="mso-spacerun:yes">&nbsp;…</span>`, which Excel restores as plain spaces (verified with Excel for Windows).
+- `parseHTMLTable`: malformed tables whose cells overlap (a span running into a slot another cell already covers) no longer produce overlapping `merges`; the later merge keeps the part that is free. Cell positions still match the browser.
 - `parseHTMLTable` with `preserveNbsp: true`: the no-break spaces inside an `mso-spacerun` are read as plain spaces, as Excel itself does, instead of being kept as U+00A0.
 
 ### Added

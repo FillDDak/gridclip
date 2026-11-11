@@ -59,12 +59,12 @@ describe('Excel for Windows (Microsoft 365, 16.0.20430), real clipboard', () => 
     // Excel writes "  앞뒤 공백  " as <span style='mso-spacerun:yes'>&nbsp; </span>…&nbsp;&nbsp;
     // and pastes that HTML back as plain spaces, so preserveNbsp must not keep them.
     const html = fixture('excel-windows-real.html');
-    expect(html).toContain("mso-spacerun:yes'>  </span>앞뒤 공백");
+    expect(html).toContain("mso-spacerun:yes'>\u00a0 </span>앞뒤 공백");
     expect(parseHTMLTable(html, { preserveNbsp: true })!.rows[3]![0]).toBe('  앞뒤 공백  ');
     const cell = (inner: string) => parseHTMLTable(`<table><tr><td>${inner}</td></tr></table>`, { preserveNbsp: true })!.rows[0]![0];
     expect(cell('<span style="mso-spacerun:yes">&nbsp;</span>')).toBe(' ');
     expect(cell('a<span style="mso-spacerun:yes"><b>&nbsp;&nbsp;</b></span>b')).toBe('a  b');
-    expect(cell('a&nbsp;<span style="mso-spacerun:no">&nbsp;</span>b')).toBe('a  b');
+    expect(cell('a&nbsp;<span style="mso-spacerun:no">&nbsp;</span>b')).toBe('a\u00a0\u00a0b');
   });
 
   it("treats colspan with mso-ignore:colspan (text overflowing into empty cells) as no merge", () => {
